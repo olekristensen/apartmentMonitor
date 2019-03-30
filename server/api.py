@@ -12,13 +12,15 @@ from StringIO import StringIO
 # Run: export FLASK_APP=api.py
 #      flask run --host=0.0.0.0
 
+
 app = Flask(__name__, static_url_path='')
+# app = Flask(__name__)
 app.config['DEBUG'] = False
-DB = "/home/pi/hue_data/hue_data.db"
+DB = "../hue_data.db"
 DB_TABLE = "hue_results"
 DEFAULT_CALLBACK_FUNC = "apiCallback"
 
-app.sqlite = sqlite3.connect(DB)
+app.sqlite = sqlite3.connect(DB, check_same_thread=False)  # This might be safe if we don't write from this thread.
 
 # @app.route('/')
 # def base_level():
@@ -132,6 +134,9 @@ def api_sensor_in_timeframe(sensor_id, start, end):
   if not callbackFunc:
     callbackFunc = DEFAULT_CALLBACK_FUNC
 
+  start = "'{}'".format(datetime.datetime.utcfromtimestamp(int(start)).strftime('%Y-%m-%d %H:%M:%S'))
+  end = "'{}'".format(datetime.datetime.utcfromtimestamp(int(end)).strftime('%Y-%m-%d %H:%M:%S'))
+
   # Retrieve sensor data
   cur = app.sqlite.cursor()
   query = """
@@ -147,6 +152,8 @@ def api_sensor_in_timeframe(sensor_id, start, end):
   # Execute query
   cur.execute(query)
   rows = cur.fetchall()
+
+  print(rows)
 
   # Parse and return
   device_name = ""
@@ -182,3 +189,7 @@ def api_sensor_in_timeframe(sensor_id, start, end):
     "sensor_name":"{2}",
     "values":{{{3}}}
   }});""".format(callbackFunc, sensor_id, device_name, ','.join(sensor_values))
+
+# run the application
+if __name__ == "__main__":
+    app.run(debug=True)
