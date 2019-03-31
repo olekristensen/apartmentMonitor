@@ -27,7 +27,7 @@ HUE_API_LOCATION = "http://{}/api/".format(HUE_IP_ADDRESS)
 INTERVAL = 10 #seconds between polls
 WRITE_FILE = False
 
-
+print("Polling API Location: {}".format(HUE_API_LOCATION))
 
 def initialize_db():
 	""" When not available, creates Database and table.

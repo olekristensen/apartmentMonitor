@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from __future__ import division
 from flask import Flask
 from flask import request
@@ -192,4 +194,4 @@ def api_sensor_in_timeframe(sensor_id, start, end):
 
 # run the application
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0')
