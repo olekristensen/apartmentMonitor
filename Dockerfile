@@ -1,7 +1,8 @@
 
 FROM python:2
 
-COPY . /src/
+COPY server/ /src/server/
+COPY get_data/ /src/get_data/
 
 RUN pip install flask
 
