@@ -5,6 +5,7 @@ import os
 import csv
 import urllib2
 import sqlite3
+import requests
 
 csv.field_size_limit(sys.maxsize)
 
@@ -17,6 +18,17 @@ if "HUE_API_KEY" in os.environ:
 	HUE_API_KEY = os.environ["HUE_API_KEY"]
 else:
 	HUE_API_KEY = "set_key_here"  # If you don't want to set in environment variables
+
+
+# If the INFLUX_URL is specified and not blank, then log to influx_db:
+if 'INFLUX_URL' in os.environ and len(os.environ['INFLUX_URL']):
+	influx_url = os.environ['INFLUX_URL']
+	# Create the database:
+	resp = requests.post(url='{}/query'.format(influx_url),
+						 data={'q':'CREATE DATABASE hue_data'})
+	print(resp.text)
+else:
+	influx_url = None
 
 DB = "../hue_data.db"
 DB_TABLE = "hue_results"
@@ -71,15 +83,20 @@ def initialize_db():
 def write_db(results):
 	""" Writes list of CSV lines (results) to database
 	"""
+
+	if influx_url is not None:
+		log_to_influx_db(results, influx_url)
+
 	# Set up DB connection
 	con = sqlite3.connect(DB)
 	cur = con.cursor()
+
 
 	time_string = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
 
 	# Write to DB
 	for line in results:
-		print(line)
+		# print('line', line)
 		try:
 			split_line = line.split(';')
 			un = "{0}{1}".format(split_line[0],split_line[7])
@@ -87,15 +104,41 @@ def write_db(results):
 			#un = "{0}{1}".format(insert_data[0],insert_data[7])
 			insert_vals = "{},{},{}".format(un, time_string, insert_data)
 			insert_vals = ','.join(["'{}'".format(val) for val in insert_vals.split(',')])
-			print(un)
-			print(insert_vals)
+			# print(un)
+			# print(insert_vals)
 			query_str = "INSERT OR IGNORE INTO {0} VALUES({1})".format(DB_TABLE, insert_vals)
-			print(query_str)
+			# print(query_str)
 			cur.execute(query_str)
 		except:
 			print "WARNING: Failed writing line to DB; '{0}'".format(line)
 	con.commit()
 	con.close()
+
+def log_to_influx_db(results, influx_url):
+
+	influx_log_str = """"""
+
+	for line in results:
+		print(line)
+		split_line = line.split(';')
+		value_str = split_line[6]
+		if value_str == 'True':
+			value_str = True
+		elif value_str == 'False' or value_str == '':
+			value_str = False
+		value = float(value_str)
+		influx_log_str+=('{},device_name={},device_type={} value={}\n'.format(
+			split_line[1],
+			split_line[0].replace(' ','_'),
+			split_line[1],
+			value))
+
+	print(influx_log_str)
+
+	resp = requests.post(url='{}/write?db=hue_data'.format(influx_url),
+				  data=influx_log_str,
+				  headers={'Content-Type': 'application/octet-stream'})
+	print(resp.text)
 
 def retrieve_data(request_string):
 	""" Question Hue API with request_string
