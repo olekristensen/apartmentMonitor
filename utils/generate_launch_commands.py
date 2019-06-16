@@ -112,7 +112,7 @@ spec:
         app: apartmentmonitor
     spec:
       containers:
-      - image: damok6/apartment-monitor:1.0
+      - image: damok6/apartment-monitor:1.1
         name: apartment-monitor
         ports:
         - containerPort: 5000
@@ -121,6 +121,8 @@ spec:
           value: "<ip>"
         - name: HUE_API_KEY
           value: "<api_key>"
+        - name: INFLUX_URL
+          value: ""
 ---
 apiVersion: v1
 kind: Service
